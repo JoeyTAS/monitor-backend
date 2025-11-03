@@ -1,0 +1,19 @@
+Cómo Ejecutarlo Ahora
+Debido a que tu aplicación ahora es un paquete (app), la forma de iniciarla cambia ligeramente.
+
+
+
+Instala todas las dependencias: pip install -r requirements.txt
+
+Para iniciar la API: Antes usabas uvicorn main:app. Ahora, debes apuntar al main.py dentro de app.
+
+
+
+uvicorn app.main:app --reload --port 8000
+
+
+Para iniciar el Chequeador: (En una terminal separada, desde la misma carpeta raíz)
+
+
+Iniciar elChecker
+python checker.py

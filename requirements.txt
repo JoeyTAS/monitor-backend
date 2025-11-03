@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+httpx
+supabase
+python-dotenv
+python-jose[cryptography]
+passlib[bcrypt]
+pydantic-settings
+
+pip install fastapi "uvicorn[standard]" httpx pydantic "supabase[client]" python-dotenv python-jose[cryptography] passlib[bcrypt]
