@@ -3,7 +3,7 @@ from typing import List, Optional
 import datetime
 
 # --- Modelos de Autenticación ---
-# (Esto es lo que falta y causa el error)
+
 
 class UserCreate(BaseModel):
     email: str

@@ -1,3 +1,4 @@
+source .venv/Scripts/activate --- para las librerias
 Cómo Ejecutarlo Ahora
 Debido a que tu aplicación ahora es un paquete (app), la forma de iniciarla cambia ligeramente.
 
