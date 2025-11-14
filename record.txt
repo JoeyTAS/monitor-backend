@@ -1,4 +1,6 @@
-source .venv/Scripts/activate --- para las librerias
+1- python -m venv .venv 
+2- .venv\Scripts\activate
+
 Cómo Ejecutarlo Ahora
 Debido a que tu aplicación ahora es un paquete (app), la forma de iniciarla cambia ligeramente.
 
