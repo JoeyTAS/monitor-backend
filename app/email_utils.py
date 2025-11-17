@@ -51,8 +51,8 @@ def send_alert_email(recipient: str, down_sites: list):
             server.starttls()
             server.login(SMTP_EMAIL, SMTP_PASSWORD)
             server.send_message(msg)
-            print("📧 Email enviado con éxito.")
+            print(" Email enviado con éxito.")
             return True
     except Exception as e:
-        print(f"❌ Error enviando email: {e}")
+        print(f"Error enviando email: {e}")
         return False

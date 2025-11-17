@@ -22,37 +22,56 @@ def run_checker():
 
     while True:
         try:
-            response = supabase.table("sites").select("id, url").execute()
-            sites = response.data
+            # Obtener todos los sitios
+            sites_res = supabase.table("sites").select("id, url, user_id").execute()
+            sites = sites_res.data
+            if not sites:
+                print("No hay sitios registrados.")
+                time.sleep(60)
+                continue
 
-            down_sites_to_alert = []  # ← almacenar los sitios caídos del ciclo
+            # Obtener todos los usuarios
+            users_list = supabase.auth.admin.list_users()  # Devuelve objetos User
+            emails_mapping = {u.id: u.email for u in users_list if hasattr(u, "email") and u.email}
 
+            # Filtrar solo usuarios con sitios
+            user_sites = {}
             for site in sites:
-                site_id = site["id"]
-                url = site["url"]
+                user_id = site.get("user_id")
+                if user_id and user_id in emails_mapping:
+                    user_sites.setdefault(user_id, []).append(site)
 
-                metrics = get_site_metrics(url)
+            down_sites_per_user = {}
 
-                # Guardar log
-                supabase.table("site_logs").insert({
-                    "site_id": site_id,
-                    "status": metrics["status"],
-                    "response_time": metrics["response_time"],
-                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
-                }).execute()
+            # Revisar sitios y registrar caídas
+            for user_id, sites_list in user_sites.items():
+                for site in sites_list:
+                    site_id = site["id"]
+                    url = site["url"]
 
-                # Detectar caída online → offline
-                previous = LAST_STATUS.get(site_id)
-                if previous != "offline" and metrics["status"] == "offline":
-                    down_sites_to_alert.append(url)
+                    metrics = get_site_metrics(url)
 
-                LAST_STATUS[site_id] = metrics["status"]
-                time.sleep(1)
+                    # Guardar log
+                    supabase.table("site_logs").insert({
+                        "site_id": site_id,
+                        "status": metrics["status"],
+                        "response_time": metrics["response_time"],
+                        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+                    }).execute()
 
-            # 🔥 SI HAY UNO O VARIOS SITIOS CAÍDOS → SOLO UN CORREO
-            if down_sites_to_alert:
-                print("⚠ Sitios caídos detectados:", down_sites_to_alert)
-                send_alert_email("joeyta3017@gmail.com", down_sites_to_alert)
+                    previous = LAST_STATUS.get(site_id)
+                    if previous != "offline" and metrics["status"] == "offline":
+                        down_sites_per_user.setdefault(user_id, []).append(url)
+
+                    LAST_STATUS[site_id] = metrics["status"]
+                    time.sleep(1)
+
+            # Enviar alertas solo a usuarios con sitios caídos
+            for user_id, urls in down_sites_per_user.items():
+                email = emails_mapping.get(user_id)
+                if email:
+                    print(f"Enviando alerta a {email} por sitios caídos: {urls}")
+                    send_alert_email(email, urls)
 
         except Exception as e:
             print(f"Error en el bucle principal del checker: {e}")

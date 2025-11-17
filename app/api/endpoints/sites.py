@@ -58,6 +58,78 @@ def get_user_sites(user_id: str = Depends(get_current_user_id)):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail="Error de servidor al obtener los sitios.")
+    
+@router.get("/logs/incidents")
+def get_incidents(user_id: str = Depends(get_current_user_id)):
+    """
+    Retorna todas las incidencias (offline) de todos los sitios del usuario.
+    Incluye: nombre, url, estado, timestamp y si se envió correo.
+    """
+    try:
+        # 1. Obtener todos los sitios del usuario
+        sites_res = supabase.table("sites") \
+            .select("id, name, url") \
+            .eq("user_id", user_id) \
+            .execute()
+
+        sites = sites_res.data
+        if not sites:
+            return []
+
+        site_ids = [s["id"] for s in sites]
+
+        # 2. Obtener todos los logs offline de esos sitios
+        logs_res = supabase.table("site_logs") \
+            .select("*") \
+            .in_("site_id", site_ids) \
+            .eq("status", "offline") \
+            .order("timestamp", desc=True) \
+            .execute()
+
+        logs = logs_res.data
+
+        # 3. Combinar con datos del sitio
+        site_map = {s["id"]: s for s in sites}
+
+        incidents = []
+        for log in logs:
+            site = site_map.get(log["site_id"])
+            if site:
+                incidents.append({
+                    "id": log["id"],
+                    "site_name": site["name"],
+                    "url": site["url"],
+                    "status": log["status"],
+                    "timestamp": log["timestamp"],
+                    "email_sent": log.get("email_sent", False)
+                })
+
+        return incidents
+
+    except Exception as e:
+        print("ERROR INCIDENTS:", e)
+        raise HTTPException(status_code=500, detail="Error al obtener las incidencias")
+@router.delete("/{site_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_site(site_id: str, user_id: str = Depends(get_current_user_id)):
+    """Eliminar un sitio del usuario"""
+    try:
+        # Verificar si el sitio existe y pertenece al usuario
+        site_response = supabase.table("sites").select("id, user_id").eq("id", site_id).single().execute()
+        site = site_response.data
+        if not site:
+            raise HTTPException(status_code=404, detail="Sitio no encontrado")
+        if site["user_id"] != user_id:
+            raise HTTPException(status_code=403, detail="No autorizado para eliminar este sitio")
+        
+        # Eliminar el sitio
+        supabase.table("sites").delete().eq("id", site_id).execute()
+
+        return  # 204 No Content
+    except HTTPException:
+        raise
+    except Exception as e:
+        print("ERROR DELETE SITE:", e)
+        raise HTTPException(status_code=500, detail="Error de servidor al eliminar el sitio")
 
 @router.get("/{site_id}/history", response_model=List[SiteLog])
 def get_site_history(
@@ -79,3 +151,5 @@ def get_site_history(
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail="Error de servidor al obtener los logs.")
+    
+
